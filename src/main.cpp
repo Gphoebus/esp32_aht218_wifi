@@ -10,16 +10,21 @@ Un serveur webb est opérationnel en mode ap sur http://192.168.4.1/
 
 #include <WiFi.h>
 #include <HttpClient.h>
-
+// librairie horloge mondiale
 #include <NTPClient.h>
+// libairie pour un serveur web
 #include <ESPAsyncWebServer.h>
+// libriarie de gestion du wifi
 #include <WiFiUdp.h>
-
+// les pages web sont stockée la
 #include <serveur_webb.h>
-
+// librairie du capteur de température
 #include <Adafruit_AHTX0.h>
 
+
+// instanciation du capteur de température
 Adafruit_AHTX0 aht;
+// création des meusere
 sensors_event_t humidity, temp;
 
 // Replace with your network credentials
@@ -43,15 +48,20 @@ long previousMillis = 0;
 long previousMillis_scroll = 0;
 #define INTERVAL 60000 // 300000
 
-#define SEALEVELPRESSURE_HPA (1013.25)
-
+// variable pour l affichage de l'horodatage
 time_t lheure;
 String ladate = "";
 String heure = "";
 time_t utcCalc;
 
+// non du wifi ap
 const char *soft_ap_ssid = "truc2";
 const char *soft_ap_password = "";
+
+/*variables permettant de traiter le get de la page web
+lors d'une requette web de type GET, les paramètres sont identifier
+ex : http://192.168.1.159/?fname=garage&lname=AC%3A67%3AB2%3A37%3AB9%3AB0&commentaire=&reseauwifi=Livebox-6780
+*/ 
 
 const char *PARAM_INPUT_1 = "fname";
 const char *PARAM_INPUT_2 = "lname";
@@ -71,12 +81,23 @@ String letat_calibration = "on";
 
 boolean transmit = false;
 
+/*mise en place d'une listre pour recevoir
+les id des réseau wifi
+*/
 String liste_wifi[10];
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
 float arrondi(float val, int precision)
+/*
+Fonction de calcul de l'arrondi
+param :
+  val (float) valeur a arrondir)
+  precision (in) precision de l'arrondi
+return :
+  renvoi un float de la valeur arrondie
+*/
 {
   val = val * precision;
   val = int(val);
@@ -88,6 +109,9 @@ float arrondi(float val, int precision)
 
 void printValues()
 {
+  /*
+  Affiche les valeurs mesurées
+  */
   Serial.print("Temperature = ");
   Serial.print(temp.temperature);
   Serial.println(" °C");
@@ -102,6 +126,10 @@ void printValues()
 
 void horodatage()
 {
+  /*
+  mise à jour de l'heure en interrogeant une horloge atomique
+  formatage de la date et l'heur
+  */
   while (!timeClient.update())
   {
     timeClient.forceUpdate();
@@ -118,6 +146,10 @@ void horodatage()
 
 // Replaces placeholder with button section in your web page
 String processor(const String &var)
+/* 
+Remplace les tags %tag% (mot encadré par %) dans la page web par
+les variables nécessaire à la création dynamique de la page web
+*/
 {
 
   // Serial.println(var);
@@ -153,7 +185,6 @@ String processor(const String &var)
   {
     return String(letat_calibration);
   }
-
   else if (var == "BUTTONPLACEHOLDER")
   {
     String buttons = "";
@@ -188,6 +219,7 @@ void setup()
 {
   // Initialize Serial Monitor
   Serial.begin(115200);
+
   Serial.println("Adafruit AHT10/AHT20 demo!");
 
   if (! aht.begin()) {
@@ -218,7 +250,7 @@ void setup()
     else if ((WiFi.SSID(i) == "phoebus_gaston"))
     {
       ssid = "phoebus_gaston";
-      password = "phoebus09";
+      password = "phoebus0911";
     }
   }
   Serial.print("connecté sur ");
@@ -267,11 +299,12 @@ void setup()
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+              // nombre de parametres dans le GET
                int paramsNr = request->params();
                 Serial.println(paramsNr);
  
     for(int i=0;i<paramsNr;i++){
- 
+        // affichage des parametres nom et valeurs
         AsyncWebParameter* p = request->getParam(i);
         Serial.print("Param name: ");
         Serial.println(p->name());
@@ -283,6 +316,7 @@ void setup()
               Serial.println(request->hasParam(PARAM_INPUT_2));
               if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2))
               {
+
                 String inputMessage1 = request->getParam(PARAM_INPUT_1)->value();
                 String inputMessage2 = request->getParam(PARAM_INPUT_2)->value();
                 String inputMessage3 = request->getParam(PARAM_INPUT_3)->value();
@@ -296,13 +330,13 @@ void setup()
                 Serial.print(inputMessage2);
                  Serial.print(" ");
                 Serial.println(inputMessage4);
+                // renvoi de la page index avec traitement par la fonction  processor
                 request->send_P(200, "text/html", index_html, processor);
                 transmit = true;
               }
               else
               {
                 horodatage();
-
                 request->send_P(200, "text/html", index_html, processor);
               } });
 
